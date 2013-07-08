@@ -1,8 +1,8 @@
-package com.rafabene.android.lib.domain;
+package com.rafabene.android.lib.twitter;
 
 import java.util.Date;
 
-public class Twitter {
+public class TwitterStatus {
 
     private Long id;
     private Date created;

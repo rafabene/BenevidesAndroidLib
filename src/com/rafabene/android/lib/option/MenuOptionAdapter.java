@@ -1,4 +1,4 @@
-package com.rafabene.android.lib.adapter;
+package com.rafabene.android.lib.option;
 
 import java.util.List;
 
@@ -12,7 +12,6 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import com.rafabene.android.lib.R;
-import com.rafabene.android.lib.domain.MenuOption;
 
 public class MenuOptionAdapter extends BaseAdapter {
 

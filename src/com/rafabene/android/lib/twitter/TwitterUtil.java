@@ -26,17 +26,71 @@ public class TwitterUtil {
     private static final String TWITTER_PREF = "TwitterPreference";
 
     private Context context;
+    private String consumerKey;
+    private String consumerSecret;
 
-    private TwitterUtil(Context context) {
-        this.context = context;
-    }
-
-    public static TwitterUtil getInstance(Context context) {
-        return new TwitterUtil(context);
+    /**
+     * Convenience method to load {@link AccessToken} from file system
+     * 
+     * @return
+     */
+    public static AccessToken loadAccessToken(Context context) {
+        SharedPreferences sharedPreferences = context.getSharedPreferences(TWITTER_PREF, MODE_PRIVATE);
+        String accessToken = sharedPreferences.getString(ACCESS_TOKEN, null);
+        String accessTokenSecret = sharedPreferences.getString(ACCESS_TOKEN_SECRET, null);
+        if (accessToken != null && accessTokenSecret != null) {
+            return new AccessToken(accessToken, accessTokenSecret);
+        } else {
+            return null;
+        }
     }
 
     /**
-     * Get Access Token using a previous RequestToken from {@link #askOAuth(String, String, String)} method
+     * Convenience method to clear stored {@link AccessToken}
+     */
+    public static void clearAccessToken(Context context) {
+        SharedPreferences sharedPreferences = context.getSharedPreferences(TWITTER_PREF, MODE_PRIVATE);
+        Editor editor = sharedPreferences.edit();
+        editor.remove(ACCESS_TOKEN);
+        editor.remove(ACCESS_TOKEN_SECRET);
+        editor.commit();
+    }
+
+    public TwitterUtil(Context context, String consumerKey, String consumerSecret) {
+        this.context = context;
+        this.consumerKey = consumerKey;
+        this.consumerSecret = consumerSecret;
+    }
+
+    public static boolean isTwitterConfigured(Context context) {
+        return loadAccessToken(context) != null;
+    }
+
+    public void startTwitterDownloadService(String query) {
+        if (isTwitterConfigured(context)){
+            Intent intent = new Intent(context, DownloadTwitterService.class);
+            intent.putExtra(DownloadTwitterService.CONSUMER_KEY, consumerKey);
+            intent.putExtra(DownloadTwitterService.CONSUMER_SECRET, consumerSecret);
+            intent.putExtra(DownloadTwitterService.QUERY_STRING, query);
+            context.startService(intent);
+        }else{
+            throw new IllegalStateException("Twitter is not authorized yet. Can't start Download Service");
+        }
+    }
+
+    public Twitter getTwitter() {
+        if (isTwitterConfigured(context)) {
+            Twitter twitter = new TwitterFactory().getInstance();
+            twitter.setOAuthConsumer(consumerKey, consumerSecret);
+            twitter.setOAuthAccessToken(loadAccessToken(context));
+            return twitter;
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * Get Access Token using a previous RequestToken from {@link #askOAuth(String)} method
      * 
      * @param consumerKey
      * @param consumerSecret
@@ -44,7 +98,7 @@ public class TwitterUtil {
      * @return
      * @throws TwitterException
      */
-    public AccessToken getAccessTokenFromOAuthVerifier(String consumerKey, String consumerSecret, String verifier)
+    public AccessToken getAccessTokenFromOAuthVerifier(String verifier)
         throws TwitterException {
         Twitter twitter = new TwitterFactory().getInstance();
         twitter.setOAuthConsumer(consumerKey, consumerSecret);
@@ -59,14 +113,14 @@ public class TwitterUtil {
             AccessToken accessToken = twitter.getOAuthAccessToken(tr, verifier);
 
             Editor editor = sharedPreferences.edit();
-            //Store AccessToken
+            // Store AccessToken
             editor.putString(ACCESS_TOKEN, accessToken.getToken());
             editor.putString(ACCESS_TOKEN_SECRET, accessToken.getTokenSecret());
-            
-            //Remove previous RequestToken
+
+            // Remove previous RequestToken
             editor.remove(REQUEST_TOKEN);
             editor.remove(REQUEST_TOKEN_SECRET);
-            
+
             editor.commit();
 
             return accessToken;
@@ -76,44 +130,17 @@ public class TwitterUtil {
     }
 
     /**
-     * Convenience method to load {@link AccessToken} from file system
-     * 
-     * @return
-     */
-    public AccessToken loadAccessToken() {
-        SharedPreferences sharedPreferences = context.getSharedPreferences(TWITTER_PREF, MODE_PRIVATE);
-        String accessToken = sharedPreferences.getString(ACCESS_TOKEN, null);
-        String accessTokenSecret = sharedPreferences.getString(ACCESS_TOKEN_SECRET, null);
-        if (accessToken != null && accessTokenSecret != null) {
-            return new AccessToken(accessToken, accessTokenSecret);
-        } else {
-            return null;
-        }
-    }
-
-    /**
-     * Convenience method to clear stored {@link AccessToken}
-     */
-    public void clearAccessToken() {
-        SharedPreferences sharedPreferences = context.getSharedPreferences(TWITTER_PREF, MODE_PRIVATE);
-        Editor editor = sharedPreferences.edit();
-        editor.remove(ACCESS_TOKEN);
-        editor.remove(ACCESS_TOKEN_SECRET);
-        editor.commit();
-    }
-
-    /**
      * Open a browser to ask to authorize app to use Twitter.
      * 
      * The {@link RequestToken} is stored so it can be used again to complete the process on
-     * {@link #getAccessTokenFromOAuthVerifier(String, String, String)} method
+     * {@link #getAccessTokenFromOAuthVerifier(String)} method
      * 
      * @param consumerKey
      * @param consumerSecret
      * @param callBackUrl
      * @throws TwitterException
      */
-    public void askOAuth(String consumerKey, String consumerSecret, String callBackUrl) throws TwitterException {
+    public void askOAuth(String callBackUrl) throws TwitterException {
         Twitter twitter = new TwitterFactory().getInstance();
         twitter.setOAuthConsumer(consumerKey, consumerSecret);
 

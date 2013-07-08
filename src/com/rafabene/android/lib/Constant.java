@@ -1,4 +1,4 @@
-package com.rafabene.android.lib.domain.vo;
+package com.rafabene.android.lib;
 
 public class Constant {
     

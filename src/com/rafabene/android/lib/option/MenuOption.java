@@ -1,4 +1,4 @@
-package com.rafabene.android.lib.domain;
+package com.rafabene.android.lib.option;
 
 import android.app.Activity;
 
